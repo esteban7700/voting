@@ -1,0 +1,373 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <script src="https://cdn.jsdelivr.net/gh/ethereum/web3.js/dist/web3.min.js"></script>
+    <title>Voting page</title>
+    <style>
+        body {
+        font-family: Arial, sans-serif;
+        text-align: center;
+        }
+
+        h1 {
+        margin-bottom: 20px;
+        }
+
+        select {
+        padding: 8px;
+        font-size: 16px;
+        }
+
+        button {
+        padding: 10px 20px;
+        font-size: 16px;
+        background-color: #4CAF50;
+        color: white;
+        border: none;
+        cursor: pointer;
+        }
+
+        button:disabled {
+        background-color: #ccc;
+        cursor: not-allowed;
+        }
+
+        #status {
+        font-weight: bold;
+        }
+
+        table {
+        border-collapse: collapse;
+        width: 50%;
+        margin-top: 20px;
+      }
+
+      th, td {
+        border: 1px solid black;
+        padding: 8px;
+        text-align: center;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>Voting page</h1>
+    <h2 id="info">Options:</h2>
+    <br />
+    <select id="option" onchange="onSelectChange()">
+        <option value="select" disabled selected>Select</option>
+        <option value="1">Option 1</option>
+        <option value="2">Option 2</option>
+        <option value="3">Option 3</option>
+    </select>
+    <button onclick="onVote()" id="voteButton" disabled>Vote</button>
+    <br />
+    <br />
+    Status: <span id="status">Loading...</span>
+
+    <h2 id="info">Results:</h2>
+    <p id="available"></p>
+    <table align="center">
+        <tr>
+          <th>Option</th>
+          <th>Votes</th>
+        </tr>
+        <tr>
+          <td>Option 1</td>
+          <td id="value1"></td>
+        </tr>
+        <tr>
+          <td>Option 2</td>
+          <td id="value2"></td>
+        </tr>
+        <tr>
+          <td>Option 3</td>
+          <td id="value3"></td>
+        </tr>
+    </table>
+
+    <script type="text/javascript">
+
+        function onSelectChange() {
+            const selectElement = document.getElementById("option");
+            const voteButton = document.getElementById("voteButton");
+            const selectedOption = selectElement.value;
+
+            if (selectedOption === "select") {
+                voteButton.disabled = true;
+            } else {
+                voteButton.disabled = false;
+            }
+        }
+
+        function timestampToDate(timestamp) {
+            const date = new Date(timestamp * 1000);
+            const year = date.getFullYear();
+            const month = ("0" + (date.getMonth() + 1)).slice(-2);
+            const day = ("0" + date.getDate()).slice(-2);
+
+            const formattedDate = `${year}-${month}-${day}`;
+            return formattedDate;
+        }
+
+        let web3;
+        let contractABI =[
+    {
+      "inputs": [
+        {
+          "internalType": "uint256",
+          "name": "_timeStart",
+          "type": "uint256"
+        },
+        {
+          "internalType": "uint256",
+          "name": "_timeEnd",
+          "type": "uint256"
+        }
+      ],
+      "stateMutability": "nonpayable",
+      "type": "constructor"
+    },
+    {
+      "anonymous": false,
+      "inputs": [
+        {
+          "indexed": true,
+          "internalType": "address",
+          "name": "previousOwner",
+          "type": "address"
+        },
+        {
+          "indexed": true,
+          "internalType": "address",
+          "name": "newOwner",
+          "type": "address"
+        }
+      ],
+      "name": "OwnershipTransferred",
+      "type": "event"
+    },
+    {
+      "anonymous": false,
+      "inputs": [
+        {
+          "indexed": false,
+          "internalType": "address",
+          "name": "sender",
+          "type": "address"
+        },
+        {
+          "indexed": false,
+          "internalType": "uint256",
+          "name": "option",
+          "type": "uint256"
+        }
+      ],
+      "name": "Vote",
+      "type": "event"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "uint256",
+          "name": "_option",
+          "type": "uint256"
+        }
+      ],
+      "name": "getResult",
+      "outputs": [
+        {
+          "internalType": "uint256",
+          "name": "",
+          "type": "uint256"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "address",
+          "name": "_address",
+          "type": "address"
+        }
+      ],
+      "name": "getVote",
+      "outputs": [
+        {
+          "internalType": "uint256",
+          "name": "",
+          "type": "uint256"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "numOptions",
+      "outputs": [
+        {
+          "internalType": "uint256",
+          "name": "",
+          "type": "uint256"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "owner",
+      "outputs": [
+        {
+          "internalType": "address",
+          "name": "",
+          "type": "address"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "renounceOwnership",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "uint256",
+          "name": "_timeEnd",
+          "type": "uint256"
+        }
+      ],
+      "name": "setTimeEnd",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "timeEnd",
+      "outputs": [
+        {
+          "internalType": "uint256",
+          "name": "",
+          "type": "uint256"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "timeStart",
+      "outputs": [
+        {
+          "internalType": "uint256",
+          "name": "",
+          "type": "uint256"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "address",
+          "name": "newOwner",
+          "type": "address"
+        }
+      ],
+      "name": "transferOwnership",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "uint256",
+          "name": "_option",
+          "type": "uint256"
+        }
+      ],
+      "name": "vote",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    }
+  ]
+        let contractAddress = "0x91230F446E8e094ce45d602455330154BA6cf29a";
+        let contract;
+
+        async function loadWeb3() {
+            if (window.ethereum) {
+                web3 = new Web3(window.ethereum);
+                window.ethereum.enable();
+            } else {
+                alert("No Ethereum provider found!");
+            }
+        }
+        
+        async function updateAvailable() {
+            const statusEl = document.getElementById("available");
+            const endTime = await contract.methods.timeEnd().call();
+
+            statusEl.innerHTML = "Available after " + new Date(endTime * 1000);
+        }
+
+        function updateStatus(status) {
+            const statusEl = document.getElementById("status");
+            statusEl.innerHTML = status;
+            console.log(status);
+        }
+
+        async function updateResults() {
+            
+            try {
+                document.getElementById("value1").textContent = await contract.methods.getResult(1).call();
+                document.getElementById("value2").textContent = await contract.methods.getResult(2).call();
+                document.getElementById("value3").textContent = await contract.methods.getResult(3).call();
+            } catch(error) {
+                document.getElementById("value1").textContent = "***";
+                document.getElementById("value2").textContent = "***";
+                document.getElementById("value3").textContent = "***";
+            }
+        }
+
+        async function load() {
+            await loadWeb3();
+            contract = new web3.eth.Contract(contractABI, contractAddress);
+            updateStatus("Ready");
+            updateAvailable();
+            updateResults();
+        }
+
+        async function onVote() {
+            updateStatus("Voting ...");
+            const account = (await web3.eth.getAccounts())[0];
+            const option = document.getElementById("option").value;
+            const rc = await contract.methods.vote(option).send({ from: account});
+            console.log(rc);
+
+            const vote = rc.events.Vote;
+
+            if (vote != undefined) {
+                updateStatus("Your vote was registered!")
+            } else {
+                console.log("No vote event was emitted");
+            }
+        }
+
+        load();
+    </script>
+  </body>
+</html>
